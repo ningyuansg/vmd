@@ -154,10 +154,11 @@ static int read_stride_record( DrawMolecule *mol,
 
 int ss_from_stride(DrawMolecule *mol) {
   int rc = 0;
-  char *stridebin   = getenv("STRIDE_BIN");
+  int freenames = 1;
+  char *stridebin = getenv("STRIDE_BIN");
   char *infilename; 
   char *outfilename;
-  
+
   if (!stridebin) {
     msgErr << "No STRIDE binary found; please set STRIDE_BIN environment variable" << sendmsg;
     msgErr << "to the location of the STRIDE binary." << sendmsg;
@@ -180,10 +181,16 @@ int ss_from_stride(DrawMolecule *mol) {
   tmpstr = (char *) malloc(strlen(outfilename));
   strcpy(tmpstr, outfilename);
   outfilename = tmpstr;
-#else
-  infilename  = tempnam(NULL, NULL);
-  outfilename = tempnam(NULL, NULL);
 #endif
+  if (getenv("STRIDE_TMP_IN") && getenv("STRIDE_TMP_OUT")) {
+      infilename = getenv("STRIDE_TMP_IN");
+      outfilename = getenv("STRIDE_TMP_OUT");
+      freenames = 0;
+  } else {
+      infilename  = tempnam(NULL, NULL);
+      outfilename = tempnam(NULL, NULL);
+  }
+
   if (infilename == NULL || outfilename == NULL) {
     msgErr << "Unable to create temporary files for STRIDE." << sendmsg;
     return 1;
@@ -217,8 +224,10 @@ int ss_from_stride(DrawMolecule *mol) {
   delete [] stridecall;
   vmd_delete_file(outfilename);
   vmd_delete_file(infilename);
-  free(outfilename);
-  free(infilename);
+  if (freenames) {
+    free(outfilename);
+    free(infilename);
+  }
 
   return rc;
 } 
